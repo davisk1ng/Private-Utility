@@ -1,0 +1,28 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    background: #111;
+    font-family: sans-serif;
+}
+
+button {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    padding: 10px 20px;
+    margin-right: 10px;
+    background: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+#removeLink {
+    left: 140px;
+}
+
+canvas {
+    width: 100vw;
+    height: 100vh;
+    display: block;
+}
