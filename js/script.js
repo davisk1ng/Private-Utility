@@ -15,7 +15,15 @@ function init() {
     renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("chainCanvas") });
     renderer.setSize(window.innerWidth, window.innerHeight);
 
+    const light = new THREE.DirectionalLight(0xffffff, 2);
+    light.position.set(5, 5, 5);
+    scene.add(light);
+
+    const ambient = new THREE.AmbientLight(0xffffff, 1);
+    scene.add(ambient);
+
     animate();
+    
 }
 
 function loadChainLink() {
