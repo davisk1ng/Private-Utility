@@ -28,7 +28,7 @@ function init() {
 
 function loadChainLink() {
     const loader = new THREE.GLTFLoader();
-    loader.load("assets/chain.glb", (gltf) => {
+    loader.load("assets/Chain.glb", (gltf) => {
         linkModel = gltf.scene;
         addLink(); // start with one link
     });
