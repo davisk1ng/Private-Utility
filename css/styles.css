@@ -10,28 +10,182 @@ button {
     bottom: 20px;
     left: 20px;
     z-index: 2;
-    padding: 10px 20px;
+    padding: 12px 24px;
     margin-right: 10px;
     background: #ffffff;
     border: 2px solid #000000;
     border-radius: 6px;
     cursor: pointer;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
-#removeLink {
-    left: 120px;
+button:hover,
+.modal-buttons button:hover,
+.close-button:hover {
+    background: #f2f2f2;
+}
+
+button:hover,
+button:focus-visible,
+.modal-buttons button:focus-visible,
+.close-button:focus-visible,
+.echo-label:focus-visible,
+#zoomSlider:focus-visible,
+.modal-field input:focus-visible,
+.modal-field textarea:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 1.5px #000000;
+}
+
+/* Settings button — top left */
+#settingsBtn {
+    position: fixed;
+    top: 24px;
+    left: 24px;
+    bottom: auto;
+    z-index: 3;
+    width: auto;
+}
+
+/* Settings screen */
+#settingsScreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #ffffff;
+    z-index: 1003;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 48px;
+    box-sizing: border-box;
+}
+
+#settingsScreen.hidden {
+    display: none;
+}
+
+#settingsHeader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+#settingsTitle {
+    font-size: 22px;
+    font-weight: 600;
+    color: #111;
+    letter-spacing: 0.04em;
+}
+
+#settingsDivider {
+    border: none;
+    border-top: 1px solid #111;
+    width: calc(100% + 24px);
+    margin: 10px 0 0 0;
+}
+
+#settingsBody {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: 320px;
+}
+
+#settingsBody button {
+    position: static;
+    justify-content: center;
+    width: 60%;
+}
+
+#uiControls {
+    position: fixed;
+    left: 24px;
+    bottom: 24px;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#uiControls button {
+    position: static;
+    margin-right: 0;
+    font-size: 19px;
+}
+
+#zoomControl {
+    background: transparent;
+    border: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#zoomLabel {
+    font-size: 19px;
+    color: #111;
+    margin-bottom: 7px;
+    text-align: center;
+}
+
+#zoomRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.zoomSign {
+    font-size: 17px;
+    width: 12px;
+    text-align: center;
+    color: #111;
+}
+
+#zoomSlider {
+    width: 108px;
+    height: 14px;
+    margin: 0;
+    padding: 0;
+    appearance: none;
+    background: #ffffff;
+    border: 2px solid #000000;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#zoomSlider::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #d9d9d9;
+    border: 1px solid #111;
+    border-radius: 2px;
+}
+
+#zoomSlider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: #d9d9d9;
+    border: 1px solid #111;
+    border-radius: 2px;
 }
 
 #statusMessage {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 24px;
+    right: 24px;
     z-index: 2;
-    padding: 8px 12px;
+    padding: 10px 14px;
     background: transparent;
     border: none;
     color: #111;
-    font-size: 24px;
+    font-size: 29px;
 }
 
 canvas {
@@ -61,47 +215,58 @@ canvas {
 .modal-content {
     background: #ffffff;
     border: 2px solid #000000;
-    border-radius: 6px;
-    padding: 20px;
-    width: 300px;
+    border-radius: 7px;
+    padding: 24px;
+    width: 360px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .modal-field {
-    margin-bottom: 15px;
+    margin-bottom: 18px;
     display: flex;
     flex-direction: column;
 }
 
 .modal-field label {
-    font-size: 14px;
-    margin-bottom: 5px;
+    font-size: 17px;
+    margin-bottom: 6px;
     color: #111;
 }
 
 .modal-field input {
-    padding: 8px 10px;
+    padding: 10px 12px;
     border: 1px solid #000000;
-    border-radius: 4px;
-    font-size: 14px;
+    border-radius: 5px;
+    font-size: 17px;
+}
+
+.modal-field textarea {
+    padding: 10px 12px;
+    border: 1px solid #000000;
+    border-radius: 5px;
+    font-size: 17px;
+    min-height: 140px;
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.4;
 }
 
 .modal-buttons {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     justify-content: flex-end;
-    margin-top: 20px;
+    margin-top: 24px;
 }
 
 .modal-buttons button {
     position: static;
-    padding: 8px 16px;
+    padding: 10px 19px;
     margin-right: 0;
     background: #ffffff;
     border: 2px solid #000000;
-    border-radius: 4px;
+    border-radius: 5px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 17px;
 }
 
 /* Echo Labels */
@@ -156,15 +321,16 @@ canvas {
     transform: translate(-50%, -50%);
     background: #ffffff;
     border: 2px solid #000000;
-    border-radius: 6px;
-    padding: 30px;
-    max-width: 500px;
-    width: 90%;
-    max-height: 80vh;
-    overflow-y: auto;
+    border-radius: 7px;
+    padding: 29px;
+    max-width: 816px;
+    width: min(816px, 92vw);
+    max-height: 86vh;
+    overflow: hidden;
     z-index: 1002;
     display: flex;
     flex-direction: column;
+    gap: 19px;
 }
 
 .hero-card.hidden {
@@ -173,29 +339,34 @@ canvas {
 
 #heroCardContent {
     flex-grow: 1;
-    margin-bottom: 20px;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px;
 }
 
 #heroCardContent h2 {
-    margin: 0 0 15px 0;
-    font-size: 24px;
+    margin: 0 0 18px 0;
+    font-size: 29px;
     color: #111;
 }
 
 #heroCardContent p {
     margin: 0;
-    font-size: 16px;
+    font-size: 22px;
     color: #333;
-    line-height: 1.5;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 
 .close-button {
+    position: static;
     align-self: center;
-    padding: 12px 30px;
+    padding: 14px 36px;
     background: #ffffff;
     border: 2px solid #000000;
-    border-radius: 6px;
+    border-radius: 7px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 19px;
     width: 100%;
 }

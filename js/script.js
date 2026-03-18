@@ -20,6 +20,7 @@ const scrollSensitivity = 0.01;
 
 const canvas = document.getElementById("chainCanvas");
 const statusMessage = document.getElementById("statusMessage");
+const zoomSlider = document.getElementById("zoomSlider");
 const chainModelUrl = `assets/Chain.glb?cacheBust=${Date.now()}`;
 
 window.addEventListener("error", (event) => {
@@ -141,12 +142,15 @@ function fitCameraToObject(object) {
 function updateZoomLimits() {
     if (chainLinks.length <= 1) {
         zoomMaxZ = zoomMinZ;
+        syncZoomSlider();
         return;
     }
 
     const chainHeight = (chainLinks.length - 1) * linkSpacing + linkHalfHeight * 2;
     const fitAll = (chainHeight / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
     zoomMaxZ = Math.max(fitAll * 1.2, zoomMinZ);
+    camera.position.z = THREE.MathUtils.clamp(camera.position.z, zoomMinZ, zoomMaxZ);
+    syncZoomSlider();
 }
 
 function updateCameraVerticalLimits() {
@@ -177,6 +181,7 @@ function onMouseWheel(event) {
         const zoomSpeed = 0.1;
         camera.position.z += event.deltaY * scrollSensitivity * camera.position.z * zoomSpeed * 60;
         camera.position.z = THREE.MathUtils.clamp(camera.position.z, zoomMinZ, zoomMaxZ);
+        syncZoomSlider();
     } else {
         const scrollStep = Math.max(0.05, linkSpacing * 0.35);
         camera.position.y -= event.deltaY * scrollSensitivity * scrollStep;
@@ -255,8 +260,35 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+function syncZoomSlider() {
+    if (!zoomSlider) {
+        return;
+    }
+
+    if (zoomMaxZ <= zoomMinZ) {
+        zoomSlider.value = "0";
+        return;
+    }
+
+    const ratio = (camera.position.z - zoomMinZ) / (zoomMaxZ - zoomMinZ);
+    const clampedRatio = THREE.MathUtils.clamp(ratio, 0, 1);
+    zoomSlider.value = String(Math.round(clampedRatio * 100));
+}
+
+function applyZoomFromSlider() {
+    if (!zoomSlider || zoomMaxZ <= zoomMinZ) {
+        return;
+    }
+
+    const ratio = Number(zoomSlider.value) / 100;
+    camera.position.z = THREE.MathUtils.lerp(zoomMinZ, zoomMaxZ, ratio);
+}
+
+if (zoomSlider) {
+    zoomSlider.addEventListener("input", applyZoomFromSlider);
+}
+
 document.getElementById("addEcho").onclick = openEchoModal;
-document.getElementById("removeLink").onclick = removeLink;
 
 // Echo Modal Functions
 function openEchoModal() {
@@ -289,10 +321,8 @@ document.getElementById("cancelEcho").onclick = closeEchoModal;
 
 // Echo Label and Hero Card Functions
 function openHeroCard(echoIndex) {
-    console.log("Opening hero card for echo:", echoIndex, echoes[echoIndex]);
     const echo = echoes[echoIndex];
     if (!echo) {
-        console.error("Echo not found at index:", echoIndex);
         return;
     }
     const heroCardContent = document.getElementById("heroCardContent");
@@ -301,14 +331,8 @@ function openHeroCard(echoIndex) {
         <p>${echo.description || ""}</p>
     `;
     
-    const overlay = document.getElementById("heroCardOverlay");
-    const card = document.getElementById("heroCard");
-    console.log("Overlay element:", overlay);
-    console.log("Card element:", card);
-    
-    overlay.classList.remove("hidden");
-    card.classList.remove("hidden");
-    console.log("Hero card should now be visible");
+    document.getElementById("heroCardOverlay").classList.remove("hidden");
+    document.getElementById("heroCard").classList.remove("hidden");
 }
 
 function closeHeroCard() {
@@ -325,34 +349,39 @@ function renderEchoLabels() {
         label.className = "echo-label";
         label.textContent = echo.title || "Echo";
         label.style.cursor = "pointer";
+        label.dataset.echoIndex = String(echoIndex);
+        label.dataset.linkIndex = String(echo.index);
         label.onclick = (e) => {
-            console.log("Label clicked for echo index:", echoIndex);
             e.stopPropagation();
             openHeroCard(echoIndex);
         };
         
-        // Get the chain link's world position
-        const linkIndex = echo.index;
-        const linkWorldPos = new THREE.Vector3();
-        if (chainLinks[linkIndex]) {
-            chainLinks[linkIndex].getWorldPosition(linkWorldPos);
+        container.appendChild(label);
+    });
+
+    updateEchoLabelPositions();
+}
+
+function updateEchoLabelPositions() {
+    const labels = document.querySelectorAll(".echo-label");
+
+    labels.forEach((labelElement) => {
+        const linkIndex = Number(labelElement.dataset.linkIndex);
+        const link = chainLinks[linkIndex];
+        if (!link) {
+            return;
         }
-        
-        // Project 3D world position to 2D screen coordinates
-        const screenPos = new THREE.Vector3();
-        screenPos.copy(linkWorldPos);
-        screenPos.project(camera);
-        
-        // Convert normalized device coordinates to screen pixels
+
+        const linkWorldPos = new THREE.Vector3();
+        link.getWorldPosition(linkWorldPos);
+
+        const screenPos = linkWorldPos.clone().project(camera);
         const x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
         const y = (-screenPos.y * 0.5 + 0.5) * window.innerHeight;
-        
-        // Position label slightly to the right of the chain
-        label.style.left = (x + 20) + "px";
-        label.style.top = (y - 15) + "px";
-        label.style.transform = "translate(0, -50%)";
-        
-        container.appendChild(label);
+
+        labelElement.style.left = (x + 20) + "px";
+        labelElement.style.top = (y - 15) + "px";
+        labelElement.style.transform = "translate(0, -50%)";
     });
 }
 
@@ -372,9 +401,40 @@ const setupHeroCardListeners = () => {
 setupHeroCardListeners();
 setTimeout(setupHeroCardListeners, 100);
 
+// Settings screen
+document.getElementById("settingsBtn").onclick = () => {
+    document.getElementById("settingsOverlay").classList.remove("hidden");
+    document.getElementById("settingsScreen").classList.remove("hidden");
+};
+
+document.getElementById("settingsOverlay").addEventListener("click", closeSettings);
+
+function closeSettings() {
+    document.getElementById("settingsOverlay").classList.add("hidden");
+    document.getElementById("settingsScreen").classList.add("hidden");
+}
+
+document.getElementById("resetChainBtn").onclick = () => {
+    // Remove all chain links from scene
+    for (const link of chainLinks) {
+        scene.remove(link);
+    }
+    chainLinks.length = 0;
+    echoes.length = 0;
+
+    // Clear label elements
+    document.getElementById("echoLabelsContainer").innerHTML = "";
+
+    chainInteraction.rebuildFromLinks();
+    updateZoomLimits();
+    updateCameraVerticalLimits();
+    setStatus("Chain links: 0");
+    closeSettings();
+};
+
 function animate() {
     requestAnimationFrame(animate);
     chainInteraction.update();
     renderer.render(scene, camera);
-    renderEchoLabels();
+    updateEchoLabelPositions();
 }

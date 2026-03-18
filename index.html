@@ -7,8 +7,31 @@
 </head>
 <body>
 
-    <button id="addEcho">Add Echo</button>
-    <button id="removeLink">Remove Link</button>
+    <button id="settingsBtn">Settings</button>
+
+    <!-- Settings Screen -->
+    <div id="settingsOverlay" class="overlay hidden"></div>
+    <div id="settingsScreen" class="hidden">
+        <div id="settingsHeader">
+            <span id="settingsTitle">Settings</span>
+            <hr id="settingsDivider">
+        </div>
+        <div id="settingsBody">
+            <button id="resetChainBtn">Reset Chain Length</button>
+        </div>
+    </div>
+
+    <div id="uiControls">
+        <button id="addEcho">Add Echo</button>
+        <div id="zoomControl">
+            <div id="zoomLabel">Zoom</div>
+            <div id="zoomRow">
+                <span class="zoomSign">+</span>
+                <input id="zoomSlider" type="range" min="0" max="100" value="0" aria-label="Zoom slider">
+                <span class="zoomSign">-</span>
+            </div>
+        </div>
+    </div>
     <div id="statusMessage">Loading chain model...</div>
 
     <!-- Echo Labels Container -->
@@ -23,7 +46,7 @@
             </div>
             <div class="modal-field">
                 <label for="descriptionInput">Description:</label>
-                <input type="text" id="descriptionInput" placeholder="Enter description">
+                <textarea id="descriptionInput" placeholder="Enter description"></textarea>
             </div>
             <div class="modal-buttons">
                 <button id="confirmEcho">Add Echo</button>
