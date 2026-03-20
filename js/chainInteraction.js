@@ -9,7 +9,6 @@ export class ChainInteraction {
 
         this.chainPoints = [];
         this.chainVelocities = [];
-        this.topAnchor = new THREE.Vector3();
         this.bottomAnchor = new THREE.Vector3();
 
         this.raycaster = new THREE.Raycaster();
@@ -42,32 +41,32 @@ export class ChainInteraction {
         this.chainVelocities = chainLinks.map(() => new THREE.Vector3());
 
         if (this.chainPoints.length > 0) {
-            this.topAnchor.copy(this.chainPoints[0]);
             this.bottomAnchor.copy(this.chainPoints[this.chainPoints.length - 1]);
         }
     }
 
     update() {
-        if (this.chainPoints.length < 3 || this.chainVelocities.length !== this.chainPoints.length) {
+        if (this.chainPoints.length < 2 || this.chainVelocities.length !== this.chainPoints.length) {
             return;
         }
 
         const previousPoints = this.chainPoints.map((point) => point.clone());
+        const lastIndex = this.chainPoints.length - 1;
 
-        for (let i = 1; i < this.chainPoints.length - 1; i += 1) {
+        for (let i = 0; i < lastIndex; i += 1) {
             if (i === this.draggingIndex) {
                 continue;
             }
 
             this.chainVelocities[i].multiplyScalar(this.motionDamping);
-            this.chainVelocities[i].y -= this.gravityStrength;
+            this.chainVelocities[i].y += this.gravityStrength;
             this.chainPoints[i].add(this.chainVelocities[i]);
             this.chainPoints[i].z = 0;
         }
 
         this.solveConstraints();
 
-        for (let i = 1; i < this.chainPoints.length - 1; i += 1) {
+        for (let i = 0; i < lastIndex; i += 1) {
             if (i === this.draggingIndex) {
                 continue;
             }
@@ -76,8 +75,7 @@ export class ChainInteraction {
             this.chainVelocities[i].lerp(frameDelta, 0.4);
         }
 
-        this.chainVelocities[0].set(0, 0, 0);
-        this.chainVelocities[this.chainVelocities.length - 1].set(0, 0, 0);
+        this.chainVelocities[lastIndex].set(0, 0, 0);
         this.applyToLinks();
     }
 
@@ -122,7 +120,7 @@ export class ChainInteraction {
 
         const linkIndex = chainLinks.indexOf(hitLink);
 
-        if (linkIndex <= 0 || linkIndex >= chainLinks.length - 1) {
+        if (linkIndex < 0 || linkIndex >= chainLinks.length - 1) {
             return;
         }
 
@@ -150,17 +148,42 @@ export class ChainInteraction {
             return;
         }
 
+        const clampedDragPoint = this.getClampedDragPoint(this.dragPoint, this.draggingIndex);
+
         const now = performance.now();
         const dt = Math.max((now - this.lastDragTime) / 1000, 1 / 240);
-        const dragVelocity = new THREE.Vector3().subVectors(this.dragPoint, this.lastDragPosition).multiplyScalar(1 / dt);
+        const dragVelocity = new THREE.Vector3().subVectors(clampedDragPoint, this.lastDragPosition).multiplyScalar(1 / dt);
 
         this.chainVelocities[this.draggingIndex].lerp(dragVelocity, 0.35);
-        this.lastDragPosition.copy(this.dragPoint);
+        this.lastDragPosition.copy(clampedDragPoint);
         this.lastDragTime = now;
 
-        this.chainPoints[this.draggingIndex].set(this.dragPoint.x, this.dragPoint.y, 0);
+        this.chainPoints[this.draggingIndex].copy(clampedDragPoint);
         this.solveConstraints();
         this.applyToLinks();
+    }
+
+    getClampedDragPoint(targetPoint, draggingIndex) {
+        const lastIndex = this.chainPoints.length - 1;
+        const segmentsToAnchor = lastIndex - draggingIndex;
+
+        if (segmentsToAnchor <= 0) {
+            return targetPoint.clone();
+        }
+
+        const maxReach = segmentsToAnchor * this.getLinkSpacing();
+        const clampedPoint = targetPoint.clone();
+        clampedPoint.z = 0;
+
+        const toTarget = new THREE.Vector3().subVectors(clampedPoint, this.bottomAnchor);
+        const distance = toTarget.length();
+
+        if (distance > maxReach && distance > 0) {
+            toTarget.multiplyScalar(maxReach / distance);
+            clampedPoint.copy(this.bottomAnchor).add(toTarget);
+        }
+
+        return clampedPoint;
     }
 
     onPointerUp() {
@@ -169,17 +192,17 @@ export class ChainInteraction {
     }
 
     solveConstraints() {
-        if (this.chainPoints.length < 3) {
+        if (this.chainPoints.length < 2) {
             return;
         }
 
         const linkSpacing = this.getLinkSpacing();
+        const lastIndex = this.chainPoints.length - 1;
 
         for (let iteration = 0; iteration < this.constraintIterations; iteration += 1) {
-            this.chainPoints[0].copy(this.topAnchor);
-            this.chainPoints[this.chainPoints.length - 1].copy(this.bottomAnchor);
+            this.chainPoints[lastIndex].copy(this.bottomAnchor);
 
-            for (let i = 0; i < this.chainPoints.length - 1; i += 1) {
+            for (let i = 0; i < lastIndex; i += 1) {
                 const p1 = this.chainPoints[i];
                 const p2 = this.chainPoints[i + 1];
                 const delta = new THREE.Vector3().subVectors(p2, p1);
@@ -191,9 +214,13 @@ export class ChainInteraction {
 
                 const correction = (distance - linkSpacing) / distance;
 
-                if (i === 0) {
+                if (i === this.draggingIndex && i + 1 === lastIndex) {
+                    continue;
+                }
+
+                if (i === this.draggingIndex) {
                     p2.addScaledVector(delta, -correction);
-                } else if (i + 1 === this.chainPoints.length - 1) {
+                } else if (i + 1 === this.draggingIndex || i + 1 === lastIndex) {
                     p1.addScaledVector(delta, correction);
                 } else {
                     p1.addScaledVector(delta, correction * 0.5);
@@ -202,8 +229,7 @@ export class ChainInteraction {
             }
         }
 
-        this.chainPoints[0].copy(this.topAnchor);
-        this.chainPoints[this.chainPoints.length - 1].copy(this.bottomAnchor);
+        this.chainPoints[lastIndex].copy(this.bottomAnchor);
     }
 
     applyToLinks() {

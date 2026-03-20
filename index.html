@@ -7,7 +7,9 @@
 </head>
 <body>
 
-    <button id="settingsBtn">Settings</button>
+    <button id="settingsBtn" aria-label="Settings">
+        <img id="settingsBtnIcon" src="assets/Gear Icon.png" alt="Settings">
+    </button>
 
     <!-- Settings Screen -->
     <div id="settingsOverlay" class="overlay hidden"></div>
@@ -22,7 +24,9 @@
     </div>
 
     <div id="uiControls">
-        <button id="addEcho">Add Echo</button>
+        <button id="addEcho" aria-label="Add Echo">
+            <img id="addEchoIcon" src="assets/Echo Icon.png" alt="Add Echo">
+        </button>
         <div id="zoomControl">
             <div id="zoomLabel">Zoom</div>
             <div id="zoomRow">
@@ -37,7 +41,7 @@
     <!-- Echo Labels Container -->
     <div id="echoLabelsContainer"></div>
 
-    <!-- Echo Modal -->
+    <!-- Echo Model -->
     <div id="echoModal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-field">

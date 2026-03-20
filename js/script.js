@@ -37,9 +37,11 @@ window.addEventListener("unhandledrejection", (event) => {
 init();
 loadChainLink();
 
+
+/* Where you can change the scene color, lighting colors, and chain link spacing calculation. */
 function init() {
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xffffff);
+    scene.background = new THREE.Color(0xe7e7e7);
 
     camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
     camera.position.set(0, 0, 4);
@@ -84,7 +86,9 @@ function loadChainLink() {
             configureLinkLayout(linkModel);
             fitCameraToObject(linkModel);
             setStatus("Chain model loaded.");
-            addLink();
+            if (!restoreChain()) {
+                addLink();
+            }
         },
         undefined,
         (error) => {
@@ -158,8 +162,14 @@ function updateCameraVerticalLimits() {
         cameraMinY = -linkHalfHeight;
         cameraMaxY = linkHalfHeight;
     } else {
-        const topY = 0 + linkHalfHeight;
-        const bottomY = -(chainLinks.length - 1) * linkSpacing - linkHalfHeight;
+        let topY = -Infinity;
+        let bottomY = Infinity;
+
+        for (const link of chainLinks) {
+            topY = Math.max(topY, link.position.y + linkHalfHeight);
+            bottomY = Math.min(bottomY, link.position.y - linkHalfHeight);
+        }
+
         const padding = Math.max(0.08, linkHalfHeight * 0.4);
 
         cameraMaxY = topY + padding;
@@ -196,28 +206,36 @@ function addLink() {
         return;
     }
 
-    const linkIndex = chainLinks.length;
     const newLink = linkModel.clone(true);
-    const offset = linkIndex * linkSpacing;
 
-    if (linkIndex % 2 === 1) {
-        newLink.rotation.y = Math.PI / 2;
+    if (chainLinks.length === 0) {
+        newLink.position.set(0, 0, 0);
+        chainLinks.push(newLink);
+    } else {
+        const topLink = chainLinks[0];
+        newLink.position.copy(topLink.position);
+        newLink.position.y += linkSpacing;
+        chainLinks.unshift(newLink);
+
+        for (const echo of echoes) {
+            echo.index += 1;
+        }
     }
 
-    newLink.position.y = -offset;
     scene.add(newLink);
-    chainLinks.push(newLink);
     chainInteraction.rebuildFromLinks();
     chainInteraction.applyToLinks();
     updateZoomLimits();
     updateCameraVerticalLimits();
     setStatus(`Chain links: ${chainLinks.length}`);
+    saveChain();
 }
 
 function addEchoWithData(title, description) {
     addLink();
-    echoes.push({ title, description, index: chainLinks.length - 1 });
+    echoes.unshift({ title, description, index: 0 });
     renderEchoLabels();
+    saveChain();
 }
 
 function removeLink() {
@@ -225,12 +243,16 @@ function removeLink() {
         return;
     }
 
-    const lastLink = chainLinks.pop();
-    scene.remove(lastLink);
+    const firstLink = chainLinks.shift();
+    scene.remove(firstLink);
     
-    // Remove corresponding echo if it exists
     if (echoes.length > 0) {
-        echoes.pop();
+        echoes.shift();
+
+        for (const echo of echoes) {
+            echo.index -= 1;
+        }
+
         renderEchoLabels();
     }
     
@@ -239,6 +261,7 @@ function removeLink() {
     updateZoomLimits();
     updateCameraVerticalLimits();
     setStatus(`Chain links: ${chainLinks.length}`);
+    saveChain();
 }
 
 function setStatus(message) {
@@ -364,6 +387,7 @@ function renderEchoLabels() {
 
 function updateEchoLabelPositions() {
     const labels = document.querySelectorAll(".echo-label");
+    const labelOffset = 20;
 
     labels.forEach((labelElement) => {
         const linkIndex = Number(labelElement.dataset.linkIndex);
@@ -379,9 +403,12 @@ function updateEchoLabelPositions() {
         const x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
         const y = (-screenPos.y * 0.5 + 0.5) * window.innerHeight;
 
-        labelElement.style.left = (x + 20) + "px";
+        const isRightSide = linkIndex % 2 === 0;
+        const labelX = isRightSide ? x + labelOffset : x - labelOffset;
+
+        labelElement.style.left = labelX + "px";
         labelElement.style.top = (y - 15) + "px";
-        labelElement.style.transform = "translate(0, -50%)";
+        labelElement.style.transform = isRightSide ? "translate(0, -50%)" : "translate(-100%, -50%)";
     });
 }
 
@@ -403,8 +430,13 @@ setTimeout(setupHeroCardListeners, 100);
 
 // Settings screen
 document.getElementById("settingsBtn").onclick = () => {
-    document.getElementById("settingsOverlay").classList.remove("hidden");
-    document.getElementById("settingsScreen").classList.remove("hidden");
+    const isOpen = !document.getElementById("settingsScreen").classList.contains("hidden");
+    if (isOpen) {
+        closeSettings();
+    } else {
+        document.getElementById("settingsOverlay").classList.remove("hidden");
+        document.getElementById("settingsScreen").classList.remove("hidden");
+    }
 };
 
 document.getElementById("settingsOverlay").addEventListener("click", closeSettings);
@@ -429,12 +461,54 @@ document.getElementById("resetChainBtn").onclick = () => {
     updateZoomLimits();
     updateCameraVerticalLimits();
     setStatus("Chain links: 0");
+    saveChain();
     closeSettings();
 };
+
+function saveChain() {
+    const data = {
+        linkCount: chainLinks.length,
+        echoes: echoes.map(({ title, description, index }) => ({ title, description, index })),
+    };
+    localStorage.setItem("chainState", JSON.stringify(data));
+}
+
+function restoreChain() {
+    const raw = localStorage.getItem("chainState");
+    if (!raw) {
+        return false;
+    }
+
+    let data;
+    try {
+        data = JSON.parse(raw);
+    } catch {
+        return false;
+    }
+
+    if (!data || typeof data.linkCount !== "number" || data.linkCount < 1) {
+        return false;
+    }
+
+    for (let i = 0; i < data.linkCount; i += 1) {
+        addLink();
+    }
+
+    if (Array.isArray(data.echoes)) {
+        echoes.length = 0;
+        for (const e of data.echoes) {
+            echoes.push({ title: e.title, description: e.description, index: e.index });
+        }
+        renderEchoLabels();
+    }
+
+    return true;
+}
 
 function animate() {
     requestAnimationFrame(animate);
     chainInteraction.update();
+    updateCameraVerticalLimits();
     renderer.render(scene, camera);
     updateEchoLabelPositions();
 }
