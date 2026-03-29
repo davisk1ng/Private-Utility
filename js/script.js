@@ -29,6 +29,14 @@ let heroPreviewFrontLabels = [];
 let heroFlipAngle = 0;
 let heroFlipTarget = 0;
 let heroFlipRafId = null;
+let heroPreviewIsQuarterTurn = false;
+const heroPreviewBasePosition = new THREE.Vector3();
+const heroPreviewCameraRight = new THREE.Vector3();
+
+// Post-flip horizontal correction controls:
+// Positive moves right, negative moves left.
+const heroFlipXOffsetFrontFacing = -0.2;
+const heroFlipXOffsetQuarterTurn = .38;
 
 const tagTextLodDistance = 3.2;
 const scrollSensitivity = 0.01;
@@ -45,6 +53,10 @@ const splashScreen = document.getElementById("splashScreen");
 const removeTagBtn = document.getElementById("removeTagBtn");
 const titleInput = document.getElementById("titleInput");
 const titleCharCount = document.getElementById("titleCharCount");
+
+let isTouchScrolling = false;
+let activeTouchScrollId = null;
+let lastTouchClientY = 0;
 
 window.addEventListener("error", (event) => {
     const message = event.error?.message || event.message || "Unknown runtime error";
@@ -111,8 +123,20 @@ function init() {
     window.addEventListener("resize", onWindowResize);
     window.addEventListener("wheel", onMouseWheel, { passive: false });
     canvas.addEventListener("click", onCanvasClick);
+    canvas.addEventListener("pointerdown", onCanvasPointerDown, { passive: true });
+    window.addEventListener("pointermove", onCanvasPointerMove, { passive: false });
+    window.addEventListener("pointerup", onCanvasPointerUp, { passive: true });
+    window.addEventListener("pointercancel", onCanvasPointerUp, { passive: true });
+
+    syncAppHeight();
+    window.addEventListener("orientationchange", syncAppHeight);
 
     animate();
+}
+
+function syncAppHeight() {
+    const appHeight = window.visualViewport?.height || window.innerHeight;
+    document.documentElement.style.setProperty("--app-height", `${appHeight}px`);
 }
 
 async function loadAssets() {
@@ -392,10 +416,54 @@ function setStatus(message) {
 }
 
 function onWindowResize() {
+    syncAppHeight();
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     resizeHeroPreview();
+}
+
+function onCanvasPointerDown(event) {
+    if (event.pointerType !== "touch") {
+        return;
+    }
+
+    isTouchScrolling = true;
+    activeTouchScrollId = event.pointerId;
+    lastTouchClientY = event.clientY;
+}
+
+function onCanvasPointerMove(event) {
+    if (!isTouchScrolling || event.pointerType !== "touch" || event.pointerId !== activeTouchScrollId) {
+        return;
+    }
+
+    // Link dragging takes priority over camera scroll dragging.
+    if (chainInteraction?.isDragging?.()) {
+        lastTouchClientY = event.clientY;
+        return;
+    }
+
+    const deltaY = event.clientY - lastTouchClientY;
+    lastTouchClientY = event.clientY;
+
+    const scrollStep = Math.max(0.05, linkSpacing * 0.35);
+    camera.position.y += deltaY * scrollSensitivity * scrollStep * 1.6;
+    camera.position.y = THREE.MathUtils.clamp(camera.position.y, cameraMinY, cameraMaxY);
+    camera.lookAt(0, camera.position.y, 0);
+
+    if (event.cancelable) {
+        event.preventDefault();
+    }
+}
+
+function onCanvasPointerUp(event) {
+    if (event.pointerType !== "touch" || event.pointerId !== activeTouchScrollId) {
+        return;
+    }
+
+    isTouchScrolling = false;
+    activeTouchScrollId = null;
 }
 
 function syncZoomSlider() {
@@ -588,9 +656,14 @@ function initHeroPreview(tag) {
     }
 
     // Create back-face date label (hidden until flipped)
-    heroPreviewBackLabel = dogTagManager.createHeroBackDateMesh(tag.createdAt, previewTextLabel);
+    heroPreviewBackLabel = dogTagManager.createHeroBackDateMesh(tag.createdAt, previewTextLabel, tag.isQuarterTurn);
     heroPreviewBackLabel.visible = false;
     heroPreviewRoot.add(heroPreviewBackLabel);
+
+    // Center the preview around its visual bounds so flip rotation stays in place.
+    recenterObjectToBounds(heroPreviewRoot);
+    heroPreviewIsQuarterTurn = !!tag.isQuarterTurn;
+    heroPreviewBasePosition.copy(heroPreviewRoot.position);
 
     // Reset flip state
     heroFlipAngle = 0;
@@ -600,6 +673,20 @@ function initHeroPreview(tag) {
     startHeroRenderLoop();
 
     canvasEl.addEventListener("click", onHeroPreviewCanvasClick);
+}
+
+function recenterObjectToBounds(object3d) {
+    if (!object3d) {
+        return;
+    }
+
+    const box = new THREE.Box3().setFromObject(object3d);
+    if (box.isEmpty()) {
+        return;
+    }
+
+    const center = box.getCenter(new THREE.Vector3());
+    object3d.position.sub(center);
 }
 
 function onHeroPreviewCanvasClick(event) {
@@ -642,21 +729,23 @@ function fitHeroPreviewCamera() {
     heroPreviewCamera.updateProjectionMatrix();
 
     const box = new THREE.Box3().setFromObject(heroPreviewRoot);
-    const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
-    const radius = Math.max(size.x, size.y, size.z, 0.1) * 0.64;
+    const sphere = box.getBoundingSphere(new THREE.Sphere());
+    const radius = Math.max(sphere.radius, 0.1);
     const fovRad = THREE.MathUtils.degToRad(heroPreviewCamera.fov);
-    const distance = radius / Math.tan(fovRad / 2);
+    const fitByHeight = radius / Math.sin(fovRad / 2);
+    const portraitPadding = heroPreviewCamera.aspect < 1 ? 1.32 : 1.16;
+    const distance = fitByHeight * portraitPadding;
 
+    // Keep camera aligned with the label face normal so the tag does not appear side-on.
     const textCandidate = heroPreviewRoot.children[2];
     const focusObject = textCandidate?.geometry ? textCandidate : heroPreviewRoot.children[1] || heroPreviewRoot;
-    const focusBox = new THREE.Box3().setFromObject(focusObject);
-    const focusCenter = focusBox.isEmpty() ? center : focusBox.getCenter(new THREE.Vector3());
-    const frontNormal = new THREE.Vector3(0, 0, 1).applyQuaternion(focusObject.getWorldQuaternion(new THREE.Quaternion())).normalize();
+    const frontNormal = new THREE.Vector3(0, 0, 1)
+        .applyQuaternion(focusObject.getWorldQuaternion(new THREE.Quaternion()))
+        .normalize();
 
-    heroPreviewCamera.position.copy(focusCenter).addScaledVector(frontNormal, distance * 0.47);
-    heroPreviewCamera.position.y += size.y * 0.05;
-    heroPreviewCamera.lookAt(focusCenter);
+    heroPreviewCamera.position.copy(center).addScaledVector(frontNormal, distance);
+    heroPreviewCamera.lookAt(center);
     heroPreviewCamera.updateProjectionMatrix();
 }
 
@@ -700,6 +789,7 @@ function disposeHeroPreviewRenderer() {
     heroPreviewFrontLabels = [];
     heroFlipAngle = 0;
     heroFlipTarget = 0;
+    heroPreviewIsQuarterTurn = false;
 }
 
 function startHeroRenderLoop() {
@@ -723,6 +813,11 @@ function heroRenderLoop() {
     }
 
     if (heroPreviewRoot) {
+        const flipProgress = THREE.MathUtils.clamp(heroFlipAngle / Math.PI, 0, 1);
+        const flipXOffset = heroPreviewIsQuarterTurn ? heroFlipXOffsetQuarterTurn : heroFlipXOffsetFrontFacing;
+        heroPreviewCamera.updateMatrixWorld();
+        heroPreviewCameraRight.setFromMatrixColumn(heroPreviewCamera.matrixWorld, 0).normalize();
+        heroPreviewRoot.position.copy(heroPreviewBasePosition).addScaledVector(heroPreviewCameraRight, flipXOffset * flipProgress);
         heroPreviewRoot.rotation.y = heroFlipAngle;
         const isFlipped = heroFlipAngle > Math.PI / 2;
         for (const fl of heroPreviewFrontLabels) {

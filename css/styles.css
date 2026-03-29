@@ -8,6 +8,10 @@ body {
     -webkit-text-size-adjust: 100%;
 }
 
+:root {
+    --app-height: 100vh;
+}
+
 #splashScreen {
     position: fixed;
     inset: 0;
@@ -97,7 +101,7 @@ button:focus-visible,
     top: 0;
     left: 0;
     width: 100vw;
-    height: 100vh;
+    height: var(--app-height);
     background: #ffffff;
     z-index: 1003;
     display: flex;
@@ -278,8 +282,8 @@ button:focus-visible,
     border: none;
     color: #111;
     font-size: clamp(20px, 3.6vw, 29px);
-    font-family: "courier-new", sans-serif;
-    font-weight: 400;
+    font-family: "proxima-nova", sans-serif;
+    font-weight: 600;
     font-style: normal;
     max-width: min(60vw, 320px);
     text-align: right;
@@ -287,7 +291,7 @@ button:focus-visible,
 
 canvas {
     width: 100vw;
-    height: 100vh;
+    height: var(--app-height);
     display: block;
 }
 
@@ -445,10 +449,16 @@ canvas {
     top: 0;
     left: 0;
     width: 100vw;
-    height: 100vh;
+    height: var(--app-height);
     overflow: hidden;
     z-index: 1010;
     background: transparent;
+}
+
+@supports (height: 100dvh) {
+    :root {
+        --app-height: 100dvh;
+    }
 }
 
 .hero-preview-stage.hidden {
@@ -510,13 +520,13 @@ canvas {
         width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px);
         display: grid;
         grid-template-columns: 64px minmax(0, 1fr);
-        align-items: end;
+        align-items: stretch;
         gap: 12px;
         box-sizing: border-box;
     }
 
     #removeTagBtn {
-        left: calc(env(safe-area-inset-left, 0px) + 12px);
+        right: calc(env(safe-area-inset-right, 0px) + 12px);
         bottom: calc(env(safe-area-inset-bottom, 0px) + 88px);
         font-size: 13px;
         padding: 8px 12px;
@@ -529,9 +539,10 @@ canvas {
 
     #addEcho {
         width: 64px;
-        height: auto;
+        height: 100%;
         min-width: 64px;
-        min-height: 64px;
+        min-height: 0;
+        align-self: stretch;
         padding: 7px;
     }
 
@@ -551,6 +562,8 @@ canvas {
     #zoomLabel {
         font-size: 18px;
         margin-bottom: 6px;
+        width: 100%;
+        text-align: center;
     }
 
     #zoomRow {
@@ -584,11 +597,11 @@ canvas {
 
     #statusMessage {
         top: calc(env(safe-area-inset-top, 0px) + 12px);
-        left: calc(env(safe-area-inset-left, 0px) + 12px);
         right: calc(env(safe-area-inset-right, 0px) + 12px);
-        max-width: none;
+        left: auto;
+        max-width: min(62vw, 280px);
         font-size: 18px;
-        text-align: center;
+        text-align: right;
         pointer-events: none;
     }
 
@@ -628,7 +641,8 @@ canvas {
     #addEcho {
         width: 60px;
         min-width: 60px;
-        min-height: 60px;
+        min-height: 0;
+        align-self: stretch;
     }
 
     #zoomControl {

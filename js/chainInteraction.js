@@ -50,6 +50,10 @@ export class ChainInteraction {
         }
     }
 
+    isDragging() {
+        return this.draggingIndex >= 0;
+    }
+
     update() {
         if (this.chainPoints.length < 2 || this.chainVelocities.length !== this.chainPoints.length) {
             return;

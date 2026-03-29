@@ -64,6 +64,16 @@ export class DogTagManager {
             labelDepthX: 3.6,
             // minimum outward lift to keep text from clipping
             labelTextLiftMin: 0.015,
+
+            // BACK FACE DATE CONTROLS (Right Labels):
+            // shift added to frontLabel.position.x
+            backLabelXShift: -3.6,
+            // shift added to frontLabel.position.y
+            backLabelYShift: 0,
+            // shift added to (-frontLabel.position.z) to place on back face
+            backLabelZShift: 0.35,
+            // added to frontLabel.rotation.y to flip to back face
+            backLabelRotYShift: Math.PI,
         };
 
 
@@ -107,6 +117,16 @@ export class DogTagManager {
 
             labelDepthX: 0,
             labelTextLiftMin: 0.015,
+
+            // BACK FACE DATE CONTROLS (Left Labels):
+            // shift added to frontLabel.position.x
+            backLabelXShift: 3.6,
+            // shift added to frontLabel.position.y
+            backLabelYShift: 0,
+            // shift added to (-frontLabel.position.z) to place on back face
+            backLabelZShift: 0.35,
+            // added to frontLabel.rotation.y to flip to back face
+            backLabelRotYShift: Math.PI + 0.026,
         };
 
         this.raycaster = new THREE.Raycaster();
@@ -336,6 +356,8 @@ export class DogTagManager {
         tag.root.rotation.y = profile.rootRotationY ?? 0;
         tag.root.rotation.z = profile.rootRotationZ ?? 0;
 
+        tag.isQuarterTurn = isQuarterTurn;
+
         const holeX = this.metrics.width * profile.holeXFactor;
         const holeY = -this.metrics.height * profile.holeYFactor;
         const depthX = profile.holeDepthOffsetX;
@@ -525,7 +547,7 @@ export class DogTagManager {
         return mesh;
     }
 
-    createHeroBackDateMesh(dateStr, frontLabel) {
+    createHeroBackDateMesh(dateStr, frontLabel, isQuarterTurn = true) {
         if (!this.textFont) {
             return new THREE.Group();
         }
@@ -598,16 +620,21 @@ export class DogTagManager {
 
         if (frontLabel) {
             // ── BACK-FACE DATE PLACEMENT ──────────────────────────────────────────
-            // Mirrors the front label position/rotation onto the back face.
-            // Adjust X/Y offsets here to move the date around on the back of the tag.
+            // Uses per-profile back label controls so left and right tags can be
+            // tuned independently. Adjust backLabel* values in each profile.
+            const backProfile = isQuarterTurn ? this.quarterTurnProfile : this.frontFacingProfile;
+            const xShift = backProfile.backLabelXShift ?? -3.6;
+            const yShift = backProfile.backLabelYShift ?? 0;
+            const zShift = backProfile.backLabelZShift ?? 0.35;
+            const rotYShift = backProfile.backLabelRotYShift ?? Math.PI;
             mesh.position.set(
-                frontLabel.position.x - 3.6,
-                frontLabel.position.y,
-                -frontLabel.position.z + 0.35
+                frontLabel.position.x + xShift,
+                frontLabel.position.y + yShift,
+                -frontLabel.position.z + zShift
             );
             mesh.rotation.set(
                 frontLabel.rotation.x,
-                frontLabel.rotation.y + Math.PI,
+                frontLabel.rotation.y + rotYShift,
                 frontLabel.rotation.z
             );
         }
