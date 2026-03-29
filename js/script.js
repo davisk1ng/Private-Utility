@@ -53,6 +53,9 @@ const splashScreen = document.getElementById("splashScreen");
 const removeTagBtn = document.getElementById("removeTagBtn");
 const titleInput = document.getElementById("titleInput");
 const titleCharCount = document.getElementById("titleCharCount");
+const hideUiBtn = document.getElementById("hideUiBtn");
+
+let isUiHidden = false;
 
 let isTouchScrolling = false;
 let activeTouchScrollId = null;
@@ -71,6 +74,8 @@ window.addEventListener("unhandledrejection", (event) => {
 
 init();
 loadAssets();
+
+restoreUiVisibilityPreference();
 
 function hideSplashScreen() {
     if (!splashScreen || splashScreen.classList.contains("hidden") || splashScreen.classList.contains("is-hiding")) {
@@ -888,6 +893,21 @@ function closeSettings() {
     document.getElementById("settingsScreen").classList.add("hidden");
 }
 
+function applyUiVisibilityState() {
+    document.body.classList.toggle("ui-hidden", isUiHidden);
+
+    if (hideUiBtn) {
+        hideUiBtn.textContent = `Hide UI: ${isUiHidden ? "On" : "Off"}`;
+        hideUiBtn.setAttribute("aria-pressed", isUiHidden ? "true" : "false");
+    }
+}
+
+function restoreUiVisibilityPreference() {
+    const stored = localStorage.getItem("hideUiEnabled");
+    isUiHidden = stored === "1";
+    applyUiVisibilityState();
+}
+
 document.getElementById("resetChainBtn").onclick = () => {
     for (const link of chainLinks) {
         scene.remove(link);
@@ -905,6 +925,14 @@ document.getElementById("resetChainBtn").onclick = () => {
     addLink();
     closeSettings();
 };
+
+if (hideUiBtn) {
+    hideUiBtn.onclick = () => {
+        isUiHidden = !isUiHidden;
+        localStorage.setItem("hideUiEnabled", isUiHidden ? "1" : "0");
+        applyUiVisibilityState();
+    };
+}
 
 function saveChain() {
     const data = {
