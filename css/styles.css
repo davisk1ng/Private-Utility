@@ -1,7 +1,7 @@
 body {
     margin: 0;
     overflow: hidden;
-    background: #ffffff;
+    background: #e7e7e7;
     font-family: "courier-new", sans-serif;
     font-weight: 400;
     font-style: normal;
@@ -290,12 +290,14 @@ button:focus-visible,
 }
 
 canvas {
-    width: 100vw;
-    height: var(--app-height);
     display: block;
 }
 
 #chainCanvas {
+    position: fixed;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
     touch-action: none;
 }
 

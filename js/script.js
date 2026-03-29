@@ -135,7 +135,9 @@ function init() {
 }
 
 function syncAppHeight() {
-    const appHeight = window.visualViewport?.height || window.innerHeight;
+    // Use innerHeight (stable layout height) not visualViewport.height which
+    // shrinks when the Safari toolbar appears, causing the canvas to fall short.
+    const appHeight = window.innerHeight;
     document.documentElement.style.setProperty("--app-height", `${appHeight}px`);
 }
 
