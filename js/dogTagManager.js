@@ -95,13 +95,15 @@ export class DogTagManager {
             rootRotationX: THREE.MathUtils.degToRad(15),
             // ROOT ROTATION: yaw/turn toward camera or away.
             rootRotationY: THREE.MathUtils.degToRad(10) - 1.8,
+            
 
             // DogTag: left/right on tag face.
             holeXFactor: 0.32,
             // DogTag: up/down on tag face.
             holeYFactor: 0.16,
             // DogTag: forward/back (depth).
-            holeDepthOffsetX: -1.3,
+            holeDepthOffsetX: -1.4,
+            
 
 
             // LABEL CONTROLS (Left Labels):
