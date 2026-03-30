@@ -97,9 +97,9 @@ export class DogTagManager {
             rootRotationY: THREE.MathUtils.degToRad(10) - 1.8,
 
             // DogTag: left/right on tag face.
-            holeXFactor: 0.42,
+            holeXFactor: 0.32,
             // DogTag: up/down on tag face.
-            holeYFactor: 0.46,
+            holeYFactor: 0.16,
             // DogTag: forward/back (depth).
             holeDepthOffsetX: -1.3,
 
@@ -119,12 +119,12 @@ export class DogTagManager {
             labelTextLiftMin: 0.015,
 
             // BACK FACE DATE CONTROLS (Left Labels):
-            // shift added to frontLabel.position.x
+            // Front and back
             backLabelXShift: 3.6,
-            // shift added to frontLabel.position.y
-            backLabelYShift: 0,
-            // shift added to (-frontLabel.position.z) to place on back face
-            backLabelZShift: 0.35,
+            // up and down
+            backLabelYShift: -0.1,
+            // Left and right
+            backLabelZShift: 0.55,
             // added to frontLabel.rotation.y to flip to back face
             backLabelRotYShift: Math.PI + 0.026,
         };
